@@ -3,16 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Eagle-Ping 🦅</title>
+    <title>Eagle-Ping Elite 🦅</title>
     <style>
-        body { margin: 0; background: #1a1a1a; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
-        canvas { display: block; background: #222; border-bottom: 4px solid #ccaa44; }
+        body { margin: 0; background: #0a0a0a; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; background: radial-gradient(circle, #1a1a1a 0%, #000 100%); }
         #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; }
-        .score { font-size: 32px; font-weight: bold; color: #ccaa44; }
+        .score { font-size: 40px; font-weight: 900; color: #ccaa44; text-shadow: 0 0 10px rgba(204,170,68,0.5); }
+        .msg { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
     </style>
 </head>
 <body>
-    <div id="ui"><div class="score">0 - 0</div></div>
+    <div id="ui">
+        <div class="msg">Eagle vs Machine</div>
+        <div class="score">0 - 0</div>
+    </div>
     <canvas id="game"></canvas>
 
 <script>
@@ -23,66 +27,88 @@ const scoreEl = document.querySelector('.score');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let scorePlayer = 0;
-let scoreRobot = 0;
+let scoreP = 0, scoreR = 0;
+let particles = [];
 
-const ball = { x: canvas.width/2, y: canvas.height/2, r: 10, sx: 5, sy: 5 };
-const p1 = { x: 20, y: canvas.height/2 - 50, w: 15, h: 100, color: '#ccaa44' };
-const robot = { x: canvas.width - 35, y: canvas.height/2 - 50, w: 15, h: 100, color: '#4488ff' };
+// Paramètres ajustés pour la difficulté
+const ball = { x: canvas.width/2, y: canvas.height/2, r: 8, sx: 7, sy: 7, color: '#fff' };
+const p1 = { x: 20, y: canvas.height/2-40, w: 12, h: 80 }; 
+const robot = { x: canvas.width-32, y: canvas.height/2-40, w: 12, h: 80 };
 
-// Contrôle tactile sur ton Oppo
+// Écouteur tactile Oppo
 window.addEventListener('touchmove', (e) => {
-    let touchY = e.touches[0].clientY;
-    p1.y = touchY - p1.h / 2;
+    p1.y = e.touches[0].clientY - p1.h / 2;
+    if(p1.y < 0) p1.y = 0;
+    if(p1.y > canvas.height - p1.h) p1.y = canvas.height - p1.h;
 });
-
-function update() {
-    ball.x += ball.sx;
-    ball.y += ball.sy;
-
-    // IA du Robot
-    robot.y += (ball.y - (robot.y + robot.h/2)) * 0.1;
-
-    // Collisions murs
-    if (ball.y < 0 || ball.y > canvas.height) ball.sy *= -1;
-
-    // Collisions Raquettes
-    if (checkCol(ball, p1) || checkCol(ball, robot)) ball.sx *= -1.1; // Accélère un peu
-
-    // Sortie de balle
-    if (ball.x < 0) { scoreRobot++; reset(); }
-    if (ball.x > canvas.width) { scorePlayer++; reset(); }
-
-    scoreEl.innerText = `${scorePlayer} - ${scoreRobot}`;
-}
 
 function checkCol(b, p) {
     return b.x < p.x + p.w && b.x + b.r > p.x && b.y < p.y + p.h && b.y + b.r > p.y;
 }
 
-function reset() {
-    ball.x = canvas.width/2; ball.sx = 5 * (Math.random() > 0.5 ? 1 : -1);
+function resetBall() {
+    ball.x = canvas.width/2;
+    ball.y = canvas.height/2;
+    ball.sx = (Math.random() > 0.5 ? 7 : -7);
+    ball.sy = (Math.random() > 0.5 ? 7 : -7);
+}
+
+function update() {
+    ball.x += ball.sx;
+    ball.y += ball.sy;
+
+    // IA du Robot "Imparfait" (vitesse réduite à 0.07 pour te laisser une chance)
+    let targetY = ball.y - robot.h/2;
+    robot.y += (targetY - robot.y) * 0.07;
+
+    // Rebond murs
+    if (ball.y <= 0 || ball.y >= canvas.height) {
+        ball.sy *= -1;
+        if(window.navigator.vibrate) window.navigator.vibrate(10);
+    }
+
+    // Rebond Raquettes + Accélération
+    if (checkCol(ball, p1)) {
+        ball.sx = Math.abs(ball.sx) * 1.05;
+        ball.x = p1.x + p1.w;
+        if(window.navigator.vibrate) window.navigator.vibrate(20);
+    }
+    if (checkCol(ball, robot)) {
+        ball.sx = -Math.abs(ball.sx) * 1.05;
+        ball.x = robot.x - ball.r;
+    }
+
+    // Scores
+    if (ball.x < 0) { scoreR++; resetBall(); }
+    if (ball.x > canvas.width) { scoreP++; resetBall(); }
+    scoreEl.innerText = `${scoreP} - ${scoreR}`;
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Ligne centrale
-    ctx.setLineDash([10, 10]);
-    ctx.strokeStyle = '#333';
-    ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
+    // Terrain décoratif
+    ctx.strokeStyle = 'rgba(204,170,68,0.1)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, canvas.width-20, canvas.height-20);
 
-    // Dessin raquettes (On mettra les sprites d'aigles ici ce soir !)
-    ctx.fillStyle = p1.color; ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
-    ctx.fillStyle = robot.color; ctx.fillRect(robot.x, robot.y, robot.w, robot.h);
+    // Dessin Raquettes (Style néon)
+    ctx.fillStyle = '#ccaa44'; // Aigle
+    ctx.shadowBlur = 15; ctx.shadowColor = '#ccaa44';
+    ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
     
+    ctx.fillStyle = '#4488ff'; // Robot
+    ctx.shadowColor = '#4488ff';
+    ctx.fillRect(robot.x, robot.y, robot.w, robot.h);
+
     // Balle
-    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.shadowBlur = 20; ctx.shadowColor = '#fff';
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
 
     update();
     requestAnimationFrame(draw);
 }
-
 draw();
 </script>
 </body>
