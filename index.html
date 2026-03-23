@@ -5,41 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Eagle-Ping Elite 🦅</title>
     <style>
-        body { margin: 0; background: #0a0a0a; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
-        canvas { display: block; background: radial-gradient(circle, #1a1a1a 0%, #000 100%); }
-        #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; }
-        .score { font-size: 40px; font-weight: 900; color: #ccaa44; text-shadow: 0 0 10px rgba(204,170,68,0.5); }
-        .msg { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
+        body { margin: 0; background: #050505; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; background: radial-gradient(circle, #1a150a 0%, #000 100%); }
+        #ui { position: absolute; top: 15px; width: 100%; text-align: center; pointer-events: none; }
+        .score { font-size: 45px; font-weight: 900; color: #ccaa44; text-shadow: 0 0 15px #ccaa4488; margin: 5px 0; }
+        .msg { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 3px; }
+        
+        /* Bouton de Tip - Clickable lui ! */
+        #tip-container { position: absolute; bottom: 30px; width: 100%; text-align: center; }
+        .tip-btn { 
+            display: inline-block; padding: 10px 20px; background: #ccaa44; color: black; 
+            border-radius: 25px; font-weight: bold; text-decoration: none; 
+            box-shadow: 0 4px 15px rgba(204,170,68,0.4); font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div id="ui">
         <div class="msg">Eagle vs Machine</div>
-        <div class="score">0 - 0</div>
+        <div class="score" id="scoreboard">0 - 0</div>
     </div>
+
     <canvas id="game"></canvas>
+
+    <div id="tip-container">
+        <a href="https://warpcast.com/jimmortel" class="tip-btn">⚡ Support with $DEGEN / SOL</a>
+    </div>
 
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const scoreEl = document.querySelector('.score');
+const scoreEl = document.getElementById('scoreboard');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let scoreP = 0, scoreR = 0;
-let particles = [];
 
-// Paramètres ajustés pour la difficulté
-const ball = { x: canvas.width/2, y: canvas.height/2, r: 8, sx: 7, sy: 7, color: '#fff' };
-const p1 = { x: 20, y: canvas.height/2-40, w: 12, h: 80 }; 
-const robot = { x: canvas.width-32, y: canvas.height/2-40, w: 12, h: 80 };
+// Config Balle & Raquettes (Équilibrée)
+const ball = { x: canvas.width/2, y: canvas.height/2, r: 10, sx: 6, sy: 6 };
+const p1 = { x: 20, y: canvas.height/2-35, w: 12, h: 70 }; 
+const robot = { x: canvas.width-32, y: canvas.height/2-35, w: 12, h: 70 };
 
-// Écouteur tactile Oppo
+// Contrôle tactile Oppo
 window.addEventListener('touchmove', (e) => {
-    p1.y = e.touches[0].clientY - p1.h / 2;
-    if(p1.y < 0) p1.y = 0;
-    if(p1.y > canvas.height - p1.h) p1.y = canvas.height - p1.h;
+    let touchY = e.touches[0].clientY - p1.h / 2;
+    p1.y = Math.max(0, Math.min(canvas.height - p1.h, touchY));
 });
 
 function checkCol(b, p) {
@@ -49,32 +60,29 @@ function checkCol(b, p) {
 function resetBall() {
     ball.x = canvas.width/2;
     ball.y = canvas.height/2;
-    ball.sx = (Math.random() > 0.5 ? 7 : -7);
-    ball.sy = (Math.random() > 0.5 ? 7 : -7);
+    ball.sx = (Math.random() > 0.5 ? 6 : -6);
+    ball.sy = (Math.random() > 0.5 ? 6 : -6);
 }
 
 function update() {
     ball.x += ball.sx;
     ball.y += ball.sy;
 
-    // IA du Robot "Imparfait" (vitesse réduite à 0.07 pour te laisser une chance)
+    // IA du Robot - Version "Humaine" (0.05)
     let targetY = ball.y - robot.h/2;
-    robot.y += (targetY - robot.y) * 0.07;
+    robot.y += (targetY - robot.y) * 0.052; 
 
     // Rebond murs
-    if (ball.y <= 0 || ball.y >= canvas.height) {
-        ball.sy *= -1;
-        if(window.navigator.vibrate) window.navigator.vibrate(10);
-    }
+    if (ball.y <= 0 || ball.y >= canvas.height) ball.sy *= -1;
 
-    // Rebond Raquettes + Accélération
+    // Rebond Raquettes + Légère accélération (1.03)
     if (checkCol(ball, p1)) {
-        ball.sx = Math.abs(ball.sx) * 1.05;
+        ball.sx = Math.abs(ball.sx) * 1.03;
         ball.x = p1.x + p1.w;
-        if(window.navigator.vibrate) window.navigator.vibrate(20);
+        if(window.navigator.vibrate) window.navigator.vibrate(15);
     }
     if (checkCol(ball, robot)) {
-        ball.sx = -Math.abs(ball.sx) * 1.05;
+        ball.sx = -Math.abs(ball.sx) * 1.03;
         ball.x = robot.x - ball.r;
     }
 
@@ -87,22 +95,28 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Terrain décoratif
+    // Déco terrain
     ctx.strokeStyle = 'rgba(204,170,68,0.1)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(10, 10, canvas.width-20, canvas.height-20);
+    ctx.setLineDash([10, 15]);
+    ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
+    ctx.setLineDash([]);
 
-    // Dessin Raquettes (Style néon)
-    ctx.fillStyle = '#ccaa44'; // Aigle
-    ctx.shadowBlur = 15; ctx.shadowColor = '#ccaa44';
+    // Raquette Joueur (Aigle)
+    ctx.fillStyle = '#ccaa44';
+    ctx.shadowBlur = 20; ctx.shadowColor = '#ccaa44';
     ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
+    // Petit oeil d'aigle
+    ctx.fillStyle = 'black'; ctx.fillRect(p1.x+4, p1.y+10, 4, 4);
     
-    ctx.fillStyle = '#4488ff'; // Robot
+    // Raquette Robot
+    ctx.fillStyle = '#4488ff';
     ctx.shadowColor = '#4488ff';
     ctx.fillRect(robot.x, robot.y, robot.w, robot.h);
+    // Oeil robotique
+    ctx.fillStyle = 'red'; ctx.fillRect(robot.x+4, robot.y+10, 4, 4);
 
     // Balle
-    ctx.fillStyle = '#fff'; ctx.shadowBlur = 20; ctx.shadowColor = '#fff';
+    ctx.fillStyle = '#fff'; ctx.shadowBlur = 15; ctx.shadowColor = '#fff';
     ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
     ctx.shadowBlur = 0;
 
