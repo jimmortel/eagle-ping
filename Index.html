@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Eagle-Ping 🦅</title>
+    <style>
+        body { margin: 0; background: #1a1a1a; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; background: #222; border-bottom: 4px solid #ccaa44; }
+        #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; }
+        .score { font-size: 32px; font-weight: bold; color: #ccaa44; }
+    </style>
+</head>
+<body>
+    <div id="ui"><div class="score">0 - 0</div></div>
+    <canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.querySelector('.score');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let scorePlayer = 0;
+let scoreRobot = 0;
+
+const ball = { x: canvas.width/2, y: canvas.height/2, r: 10, sx: 5, sy: 5 };
+const p1 = { x: 20, y: canvas.height/2 - 50, w: 15, h: 100, color: '#ccaa44' };
+const robot = { x: canvas.width - 35, y: canvas.height/2 - 50, w: 15, h: 100, color: '#4488ff' };
+
+// Contrôle tactile sur ton Oppo
+window.addEventListener('touchmove', (e) => {
+    let touchY = e.touches[0].clientY;
+    p1.y = touchY - p1.h / 2;
+});
+
+function update() {
+    ball.x += ball.sx;
+    ball.y += ball.sy;
+
+    // IA du Robot
+    robot.y += (ball.y - (robot.y + robot.h/2)) * 0.1;
+
+    // Collisions murs
+    if (ball.y < 0 || ball.y > canvas.height) ball.sy *= -1;
+
+    // Collisions Raquettes
+    if (checkCol(ball, p1) || checkCol(ball, robot)) ball.sx *= -1.1; // Accélère un peu
+
+    // Sortie de balle
+    if (ball.x < 0) { scoreRobot++; reset(); }
+    if (ball.x > canvas.width) { scorePlayer++; reset(); }
+
+    scoreEl.innerText = `${scorePlayer} - ${scoreRobot}`;
+}
+
+function checkCol(b, p) {
+    return b.x < p.x + p.w && b.x + b.r > p.x && b.y < p.y + p.h && b.y + b.r > p.y;
+}
+
+function reset() {
+    ball.x = canvas.width/2; ball.sx = 5 * (Math.random() > 0.5 ? 1 : -1);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Ligne centrale
+    ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = '#333';
+    ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
+
+    // Dessin raquettes (On mettra les sprites d'aigles ici ce soir !)
+    ctx.fillStyle = p1.color; ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
+    ctx.fillStyle = robot.color; ctx.fillRect(robot.x, robot.y, robot.w, robot.h);
+    
+    // Balle
+    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+
+    update();
+    requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
